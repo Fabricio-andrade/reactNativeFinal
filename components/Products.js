@@ -1,77 +1,199 @@
-import react, { useState } from "react";
-import { View, StyleSheet, Text, TextInput, Pressable } from "react-native";
-import { collection, addDoc } from "firebase/firestore";
+import react, { useEffect, useState } from "react";
+import { View, StyleSheet, Text, TextInput, Pressable, FlatList } from "react-native";
+import { collection, addDoc, getDocs, updateDoc, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase/connection";
 
 const Separator = () => {
     return <View style={styles.separator} />
 }
 
+function ProductsList({ data, deleteItem, editItem }) {
+    return (
+        <View style={styles.containerCard}>
+            <Text style={styles.text}>{data.nome}</Text>
+            <Text style={styles.text}>Desenvolvido por {data.prod}</Text>
+            <Text style={styles.text}>Categoria: {data.categoria}</Text>
+            <Text style={styles.text}>Ano de lançamento: {data.ano}</Text>
+
+            <View style={styles.item}>
+                <Pressable onPress={() => deleteItem(data.key)}>
+                    <Text style={styles.text} >Excluir</Text>
+                </Pressable>
+                <Pressable onPress={() => editItem(data)}>
+                    <Text style={styles.text} >Editar</Text>
+                </Pressable>
+            </View>
+        </View>
+    )
+}
+
 export default function Products() {
     const [name, setName] = useState("");
     const [dev, setDev] = useState("");
-    const [desc, setDesc] = useState("");
+    const [categoria, setCategoria] = useState("");
     const [ano, setAno] = useState(Number);
-    let [cadastrar, setCad] = useState(false)
+    const [products, setProducts] = useState([]);
+    const [key, setKey] = useState("")
+    let [cadastrar, setCad] = useState(false);
+    let [edit, setEdit] = useState(false);
+
+    useEffect(() => {
+        Listar();
+    }, [])
+
+    async function Listar() {
+        const querySnapshot = await getDocs(collection(db, "Produtos"));
+        querySnapshot.forEach((doc) => {
+            // doc.data() is never undefined for query doc snapshots
+            const produtos = {
+                id: doc.id,
+                nome: doc.data().nome,
+                prod: doc.data().produtora,
+                categoria: doc.data().categoria,
+                ano: doc.data().ano
+            }
+            setProducts(e => [...e, produtos].reverse());
+            console.log(doc.id, " => ", doc.data());
+        });
+    }
+
     async function addProduct() {
-        if (name == "" || dev == "" || desc == "" || (ano == "" || isNaN(ano))) {
-            
+        if (name == "" || dev == "" || categoria == "" || (ano == "" || isNaN(ano))) {
+
             return console.log("erro");
-            
+
         }
         try {
             const docRef = await addDoc(collection(db, "Produtos"), {
                 nome: name,
                 produtora: dev,
-                descricao: desc,
+                categoria: categoria,
                 ano: ano
             });
+            setProducts(e => [{
+                nome: name,
+                prod: dev,
+                categoria: categoria,
+                ano: ano
+            }, ...e]);
+            setCad(false);
             console.log("Document written with ID: ", docRef.id);
         } catch (e) {
             console.error("Error adding document: ", e);
         }
     }
+
+    function handleEdit(e) {
+        setEdit(true);
+        setCad(true);
+        setKey(e.id),
+            setName(e.nome),
+            setDev(e.prod),
+            setCategoria(e.categoria),
+            setAno(e.ano)
+    }
+
+    async function editProduct() {
+        const docRef = doc(db, "Produtos", key);
+        await setDoc(docRef, {
+            nome: name,
+            produtora: dev,
+            categoria: categoria,
+            ano: ano
+        });
+        setEdit(false);
+        setCad(false);
+        clearData();
+        await Listar();
+    }
+
+    async function handleDelete(e) {
+        await deleteDoc(doc(db, "Produtos", e));
+        clearData();
+        await Listar();
+    }
+
+    function clearData() {
+        setKey("");
+        setName("");
+        setDev("");
+        setCategoria("");
+        setAno("");
+        setProducts("");
+    }
     return (
-            cadastrar ? (
-                <View style={styles.container}>
-                <View style={styles.form}>
-                    <Text style={styles.formTitle}>Título</Text>
-                    <TextInput style={styles.Input} onChangeText={(text) => setName(text)} placeholder="Digite aqui" />
-                    <Separator />
-                    <Text style={styles.formTitle}>Desenvolvedora</Text>
-                    <TextInput style={styles.Input} onChangeText={(text) => setDev(text)} placeholder="Digite aqui" />
-                    <Separator />
-                    <Text style={styles.formTitle}>Categoria</Text>
-                    <TextInput style={styles.Input} onChangeText={(text) => setDesc(text)} placeholder="Digite aqui" />
-                    <Separator />
-                    <Text style={styles.formTitle}>Ano de lançamento</Text>
-                    <TextInput style={styles.Input} onChangeText={(text) => setAno(text)} placeholder="Digite aqui" />
-                    <Separator />
-                    
+        cadastrar ? (
+            <View style={styles.container}>
+                <View style={styles.content}>
+                    <Pressable onPress={() => { setCad(false) }}>
+                        <Text>X</Text>
+                    </Pressable>
+                    <View style={styles.form}>
+                        <Text style={styles.formTitle}>Título</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setName(text)} placeholder="Digite aqui" value={name} />
+                        <Separator />
+                        <Text style={styles.formTitle}>Desenvolvedora</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setDev(text)} placeholder="Digite aqui" value={dev} />
+                        <Separator />
+                        <Text style={styles.formTitle}>Categoria</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setCategoria(text)} placeholder="Digite aqui" value={categoria} />
+                        <Separator />
+                        <Text style={styles.formTitle}>Ano de lançamento</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setAno(text)} placeholder="Digite aqui" value={ano} />
+                        <Separator />
+
+                    </View>
+                    {edit ?
+                        <Pressable style={styles.Pressable} onPress={editProduct}><Text style={styles.btnSave}>Alterar</Text></Pressable> :
+                        <Pressable style={styles.Pressable} onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
+                    }
                 </View>
-                <Pressable onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
-                </View>
-                ) : (<View style={styles.container}>
-                    <Pressable onPress={() => {setCad(true)}}>
-                        <Text style={styles.btnSave}>Cadastrar</Text>
-                        </Pressable>
-                    </View>)
-            
-        
+            </View>
+        ) : (<View style={styles.container}>
+            <View style={styles.content}>
+                <Pressable onPress={() => { setCad(true) }}>
+                    <Text style={styles.btnSave}>Cadastrar</Text>
+                </Pressable>
+                <FlatList keyExtractor={item => item.key} data={products} renderItem={({ item }) => (
+                    <ProductsList data={item} editItem={handleEdit} deleteItem={() => handleDelete(item.id)} />
+                )} />
+            </View>
+        </View>
+        )
+
+
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        alignItems: "center"
+        alignItems: "center",
+        backgroundColor: "#222",
+        width: "100vw",
+        height: "100vh"
+    },
+
+    content: {
+        margin: 15,
+    },
+
+    containerCard: {
+        marginVertical: 10,
+        padding: 10,
+        backgroundColor: "#444",
+        width: "95vw",
+        height: "15vh"
+    },
+    text:{
+        color: "white"
     },
 
     form: {
         marginVertical: 15
     },
 
-    formTitle:{
+    formTitle: {
         marginVertical: 5,
         paddingHorizontal: 30
     },
@@ -81,19 +203,25 @@ const styles = StyleSheet.create({
         paddingVertical: 0,
         paddingHorizontal: 30,
         height: "6vh",
-        width: "85vw",
+        width: "95vw",
         //borderWidth: 2,
-        borderRadius: 100
+        //borderRadius: 100
+    },
+    Pressable: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center"
     },
 
-    btnSave:{
-        textAlign:"center",
-        //textAlignVertical: "bottom",
+    btnSave: {
+        textAlign: "center",
+        textAlignVertical: "bottom",
+        paddingVertical: 10,
         fontSize: 20,
         color: "white",
-        width: "50vw",
-        height: "4vh",
-        borderRadius: 100,
+        width: "95vw",
+        height: "6vh",
+        //borderRadius: 100,
         backgroundColor: "#88d"
     },
 
