@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "498612076522",
+    "firebase_url": "https://dbcrud-d1149-default-rtdb.firebaseio.com",
+    "project_id": "dbcrud-d1149",
+    "storage_bucket": "dbcrud-d1149.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:498612076522:android:7b71d60ce7d4d58ac27c93",
+        "android_client_info": {
+          "package_name": "app.react.final"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTLnFZ8D5MbG19eKb_9PBieVLZv5vhdIs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
