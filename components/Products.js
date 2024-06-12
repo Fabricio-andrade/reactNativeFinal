@@ -1,11 +1,22 @@
-import react, { useEffect, useState } from "react";
+import react, { useEffect, useState, useRef } from "react";
 import { View, StyleSheet, Text, TextInput, Pressable, FlatList } from "react-native";
 import { collection, addDoc, getDocs, updateDoc, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase/connection";
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 
 const Separator = () => {
     return <View style={styles.separator} />
 }
+
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false
+    }),
+  });
 
 function ProductsList({ data, deleteItem, editItem }) {
     return (
@@ -29,6 +40,37 @@ function ProductsList({ data, deleteItem, editItem }) {
 }
 
 export default function Products() {
+    //Notification
+    const [expoPushToken, setExpoPushToken] = useState('');
+    const [channels, setChannels] = useState([]);
+    const [notification, setNotification] = useState(undefined);
+    const notificationListener = useRef();
+    const responseListener = useRef();
+
+    useEffect(() => {
+        registerForPushNotificationsAsync().then(token => token && setExpoPushToken(token));
+
+        if (Device.OS === 'android') {
+            Notifications.getNotificationChannelsAsync().then(value => setChannels(value ?? []));
+        }
+        notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+            setNotification(notification);
+        });
+
+        responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+            console.log(response);
+        });
+
+        return () => {
+            notificationListener.current &&
+                Notifications.removeNotificationSubscription(notificationListener.current);
+            responseListener.current &&
+                Notifications.removeNotificationSubscription(responseListener.current);
+        };
+    }, []);
+
+
+    //Produtos
     const [name, setName] = useState("");
     const [dev, setDev] = useState("");
     const [categoria, setCategoria] = useState("");
@@ -78,6 +120,7 @@ export default function Products() {
                 ano: ano
             }, ...e]);
             setCad(false);
+            await schedulePushNotification(name);
             console.log("Document written with ID: ", docRef.id);
         } catch (e) {
             console.error("Error adding document: ", e);
@@ -123,54 +166,113 @@ export default function Products() {
         setProducts("");
     }
     return (
-    cadastrar ? (
-        <View style={styles.container}>
-            <View style={styles.content}>
-                <Pressable onPress={() => { setCad(false) }}>
-                    <Text style={styles.text}>X</Text>
-                </Pressable>
-                <View style={styles.form}>
-                    <Text style={styles.formTitle}>Título</Text>
-                    <TextInput style={styles.Input} onChangeText={(text) => setName(text)} placeholder="Digite aqui" value={name} />
-                    <Separator />
-                    <Text style={styles.formTitle}>Desenvolvedora</Text>
-                    <TextInput style={styles.Input} onChangeText={(text) => setDev(text)} placeholder="Digite aqui" value={dev} />
-                    <Separator />
-                    <Text style={styles.formTitle}>Categoria</Text>
-                    <TextInput style={styles.Input} onChangeText={(text) => setCategoria(text)} placeholder="Digite aqui" value={categoria} />
-                    <Separator />
-                    <Text style={styles.formTitle}>Ano de lançamento</Text>
-                    <TextInput style={styles.Input} onChangeText={(text) => setAno(text)} placeholder="Digite aqui" value={ano} />
-                    <Separator />
+        cadastrar ? (
+            <View style={styles.container}>
+                <View style={styles.content}>
+                    <Pressable onPress={() => { setCad(false) }}>
+                        <Text style={styles.text}>X</Text>
+                    </Pressable>
+                    <View style={styles.form}>
+                        <Text style={styles.formTitle}>Título</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setName(text)} placeholder="Digite aqui" value={name} />
+                        <Separator />
+                        <Text style={styles.formTitle}>Desenvolvedora</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setDev(text)} placeholder="Digite aqui" value={dev} />
+                        <Separator />
+                        <Text style={styles.formTitle}>Categoria</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setCategoria(text)} placeholder="Digite aqui" value={categoria} />
+                        <Separator />
+                        <Text style={styles.formTitle}>Ano de lançamento</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setAno(text)} placeholder="Digite aqui" value={ano} />
+                        <Separator />
 
+                    </View>
+                    {edit ?
+                        <Pressable style={styles.Pressable} onPress={editProduct}><Text style={styles.btnSave}>Alterar</Text></Pressable> :
+                        <Pressable style={styles.Pressable} onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
+                    }
                 </View>
-                {edit ?
-                    <Pressable style={styles.Pressable} onPress={editProduct}><Text style={styles.btnSave}>Alterar</Text></Pressable> :
-                    <Pressable style={styles.Pressable} onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
-                }
+            </View>
+        ) : (<View style={styles.container}>
+            <View style={styles.content}>
+                <Pressable onPress={() => { setCad(true) }}>
+                    <Text style={styles.btnSave}>Cadastrar</Text>
+                </Pressable>
+                <FlatList keyExtractor={item => item.key} data={products} renderItem={({ item }) => (
+                    <ProductsList data={item} editItem={handleEdit} deleteItem={() => handleDelete(item.id)} />
+                )} />
             </View>
         </View>
-    ) : (<View style={styles.container}>
-        <View style={styles.content}>
-            <Pressable onPress={() => { setCad(true) }}>
-                <Text style={styles.btnSave}>Cadastrar</Text>
-            </Pressable>
-            <FlatList keyExtractor={item => item.key} data={products} renderItem={({ item }) => (
-                <ProductsList data={item} editItem={handleEdit} deleteItem={() => handleDelete(item.id)} />
-            )} />
-        </View>
-    </View>
-    )
-);
+        )
+    );
 }
+
+async function schedulePushNotification(name) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Novo jogo adicionado",
+        body: name,
+        data: { data: 'goes here', test: { test1: 'more data' } },
+      },
+      trigger: { seconds: 2 },
+    });
+  }
+  
+  async function registerForPushNotificationsAsync() {
+    let token;
+  
+    if (Device.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
+  
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        alert('Failed to get push token for push notification!');
+        return;
+      }
+      // Learn more about projectId:
+      // https://docs.expo.dev/push-notifications/push-notifications-setup/#configure-projectid
+      // EAS projectId is used here.
+      try {
+        const projectId =
+          Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+        if (!projectId) {
+          throw new Error('Project ID not found');
+        }
+        token = (
+          await Notifications.getExpoPushTokenAsync({
+            projectId,
+          })
+        ).data;
+        console.log(token);
+      } catch (e) {
+        token = `${e}`;
+      }
+    } else {
+      alert('Must use physical device for Push Notifications');
+    }
+  
+    return token;
+  }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         alignItems: "center",
         backgroundColor: "#222",
-        width: "100vw",
-        height: "100vh"
+        width: "100%",
+        height: "100%"
     },
 
     content: {
@@ -188,10 +290,10 @@ const styles = StyleSheet.create({
         width: "95vw",
         height: "15vh"
     },
-    cardContent:{
+    cardContent: {
         minWidth: '50%',
         maxWidth: '50%'
-    },  
+    },
 
     text: {
         color: "white"
@@ -208,11 +310,11 @@ const styles = StyleSheet.create({
         paddingTop: 3
     },
 
-    cardText:{
+    cardText: {
         borderBottomColor: "#fff",
         borderBottomWidth: StyleSheet.hairlineWidth,
         marginVertical: 5,
-        
+
     },
 
     optionsEdit: {
