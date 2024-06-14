@@ -1,17 +1,34 @@
-import react, { useState, useEffect } from "react";
-import { Text, View, SafeAreaView, StyleSheet, Button, FlatList, Image } from "react-native";
+import react, { useState, useEffect, useCallback } from "react";
+import { Text, View, SafeAreaView, StyleSheet, Button, FlatList, Image, Pressable, ScrollView, RefreshControl } from "react-native";
 import { collection, getDocs } from "firebase/firestore";
+import { Firestore } from "firebase/firestore";
+import { getStorage, ref } from "firebase/storage";
 import { db } from "../firebase/connection";
 
 function ProductsList({ data }) {
+    const [show, setShow] = useState(false);
+    let image = data.image;
     return (
         <View style={styles.Card}>
             <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{data.nome}</Text>
-                <Image require={{uri: data.Image}} style={{ flex: 1, maxWidth:'95vw', minHeight: "30vh" }} resizeMode="contain"/>
-                <Text style={styles.cardInfo}>Desenvolvido por {data.prod}</Text>
-                <Text style={styles.cardInfo}>Ano de lançamento: {data.ano}</Text>
-                <Text style={styles.cardInfo}>Categoria(s): {data.categoria}</Text>
+                <View style={styles.cardImage} >
+                    <Image source={{ uri: image }} style={styles.cardImage} resizeMode="contain" />
+                </View>
+                {show ?
+                    <>
+                        <Text style={styles.cardInfo}>Desenvolvido por {data.prod}</Text>
+                        <Text style={styles.cardInfo}>Ano de lançamento: {data.ano}</Text>
+                        <Text style={styles.cardInfo}>Categoria(s): {data.categoria}</Text>
+                        <Text style={styles.cardInfo}>Sinopse:</Text>
+                        <Text style={styles.cardInfo}>{data.desc}</Text>
+                    </>
+                    : ''
+                }
+                {!show ?
+                    <Pressable onPress={() => { setShow(true) }}><Text style={{ color: '#fff' }}>Mostrar mais</Text></Pressable> :
+                    <Pressable onPress={() => { setShow(false) }}><Text style={{ color: '#fff' }}>Recolher</Text></Pressable>
+                }
             </View>
         </View>
     )
@@ -19,14 +36,26 @@ function ProductsList({ data }) {
 
 export default function Home() {
     const [products, setProducts] = useState([]);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        setTimeout(async () => {
+            setRefreshing(false);
+            await Listar();
+        }, 2000);
+        console.log("Refreshed");
+    }, []);
+
 
     useEffect(() => {
         Listar();
     }, [])
 
     async function Listar() {
+        setProducts([])
         const querySnapshot = await getDocs(collection(db, "Produtos"));
-        querySnapshot.forEach((doc) => {
+        querySnapshot.forEach(async (doc) => {
             // doc.data() is never undefined for query doc snapshots
             const produtos = {
                 id: doc.id,
@@ -38,15 +67,19 @@ export default function Home() {
                 image: doc.data().Image
             }
             setProducts(e => [...e, produtos].reverse());
-            console.log(doc.id, " => ", doc.data());
         });
     }
     return (
         <View style={styles.container}>
-            <Text style={styles.text}>Todos os seus jogos<br /> em um só lugar!</Text>
+
+            <Text style={styles.title}>Todos os seus jogos em um só lugar!</Text>
+
             <FlatList keyExtractor={item => item.key} data={products} renderItem={({ item }) => (
                 <ProductsList data={item} />
-            )} />
+            )} refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            } />
+
         </View>
     )
 }
@@ -58,9 +91,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    title: {
+        color: "#fff",
+        fontSize: 28,
+        marginVertical: 20
+    },
     text: {
         fontSize: 30,
-        color: '#fff'
+        color: '#fff',
+
     },
     Card: {
         flex: 1,
@@ -82,7 +121,7 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         color: '#fff',
-        
+
 
     },
     cardTitle: {
@@ -93,7 +132,20 @@ const styles = StyleSheet.create({
         fontSize: 15,
         marginVertical: 8,
         color: '#fff'
-    }
+    },
+    cardImage: {
+        flex: 1,
+        flexDirection: "row",
+        minWidth: "100%",
+        minHeight: 200,
+        marginVertical: 8
+    },
+    scrollView: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
 
 
 })

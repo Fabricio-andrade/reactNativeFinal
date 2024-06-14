@@ -1,12 +1,12 @@
 import react, { useEffect, useState, useRef } from "react";
-import { View, StyleSheet, Text, TextInput, Pressable, FlatList, Button, Image } from "react-native";
+import { View, StyleSheet, Text, TextInput, Pressable, FlatList, Button, Image, PermissionsAndroid } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import { collection, addDoc, getDocs, updateDoc, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase/connection";
-import { getStorage, ref } from "firebase/storage";
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import Picker from "./imagePicker";
 
 const Separator = () => {
     return <View style={styles.separator} />
@@ -22,6 +22,7 @@ Notifications.setNotificationHandler({
 
 function ProductsList({ data, deleteItem, editItem }) {
     return (
+
         <View style={styles.Card}>
             <View style={styles.cardContent}>
                 <Text style={[styles.text, styles.cardText]}>{data.nome}</Text>
@@ -91,11 +92,39 @@ export default function Products() {
             includeBase64: false,
             maxHeight: 2000,
             maxWidth: 2000,
-            minWidth: 500
+            minWidth: 500,
+            storageOptions: {
+                skipBackup: true,
+                path: 'images'
+            }
         };
-
+        await requestCameraPermission();
         await launchImageLibrary(options, handleResponse);
-        console.log(SelectedImage);
+
+    };
+
+    const requestCameraPermission = async () => {
+        try {
+            const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+                {
+                    title: 'Cool Photo App Camera Permission',
+                    message:
+                        'Cool Photo App needs access to your camera ' +
+                        'so you can take awesome pictures.',
+                    buttonNeutral: 'Ask Me Later',
+                    buttonNegative: 'Cancel',
+                    buttonPositive: 'OK',
+                },
+            );
+            if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+                console.log('You can use the camera');
+            } else {
+                console.log('Camera permission denied');
+            }
+        } catch (err) {
+            console.warn(err);
+        }
     };
 
     const handleResponse = (response) => {
@@ -108,15 +137,13 @@ export default function Products() {
             setImage(imageUri);
         }
     };
-    const storage = getStorage()
-
-    const imageRef = ref(storage, `assets/${SelectedImage}`)
 
     useEffect(() => {
         Listar();
     }, [])
 
     async function Listar() {
+        setProducts([])
         const querySnapshot = await getDocs(collection(db, "Produtos"));
         querySnapshot.forEach((doc) => {
             // doc.data() is never undefined for query doc snapshots
@@ -125,10 +152,12 @@ export default function Products() {
                 nome: doc.data().nome,
                 prod: doc.data().produtora,
                 categoria: doc.data().categoria,
-                ano: doc.data().ano
+                ano: doc.data().ano,
+                image: doc.data().Image,
+                desc: doc.data().desc
+
             }
             setProducts(e => [...e, produtos].reverse());
-            console.log(doc.id, " => ", doc.data());
         });
     }
 
@@ -156,7 +185,7 @@ export default function Products() {
                 desc: desc
             }, ...e]);
             setCad(false);
-            await schedulePushNotification(name);
+            await schedulePushNotificationCad(name);
             console.log("Document written with ID: ", docRef.id);
         } catch (e) {
             console.error("Error adding document: ", e);
@@ -171,8 +200,8 @@ export default function Products() {
         setDev(e.prod);
         setCategoria(e.categoria);
         setAno(e.ano);
-        setImage(e.SelectedImage);
-        setDesc(e.Desc);
+        setImage(e.image);
+        setDesc(e.desc);
     }
 
     async function editProduct() {
@@ -187,6 +216,7 @@ export default function Products() {
         });
         setEdit(false);
         setCad(false);
+        await schedulePushNotificationEdit(name)
         clearData();
         await Listar();
     }
@@ -228,10 +258,10 @@ export default function Products() {
                         <Text style={styles.formTitle}>Sinopse</Text>
                         <TextInput style={styles.Input} onChangeText={(text) => setDesc(text)} placeholder="Digite aqui" value={desc} />
                         <Separator />
-                        <Button title='Escolher imagem' onPress={openImagePicker} />
+                        <Picker />
                         <View style={{ flex: 1, justifyContent: 'center' }}>
                             {SelectedImage ?
-                                <Image source={{ uri: SelectedImage }} style={{ flex: 1, maxWidth:'95vw', minHeight: "30vh" }} resizeMode="contain" /> : ''
+                                <Image source={{ uri: SelectedImage }} style={{flex:1, maxWidth: '100%' }} resizeMode="contain" /> : ''
                             }
                         </View>
 
@@ -256,14 +286,25 @@ export default function Products() {
     );
 }
 
-async function schedulePushNotification(name) {
+async function schedulePushNotificationCad(name) {
     await Notifications.scheduleNotificationAsync({
         content: {
             title: "Novo jogo adicionado",
             body: name,
             data: { data: 'goes here', test: { test1: 'more data' } },
         },
-        trigger: { seconds: 2 },
+        trigger: { seconds: 1 },
+    });
+}
+
+async function schedulePushNotificationEdit(name) {
+    await Notifications.scheduleNotificationAsync({
+        content: {
+            title: "Jogo alterado",
+            body: name,
+            data: { data: 'goes here', test: { test1: 'more data' } },
+        },
+        trigger: { seconds: 1 },
     });
 }
 
@@ -325,7 +366,7 @@ const styles = StyleSheet.create({
     },
 
     content: {
-        margin: 15,
+        margin: 5,
     },
 
     Card: {
@@ -389,15 +430,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 30,
         height: "6vh",
         width: "95vw",
-        //borderWidth: 2,
-        //borderRadius: 100
+
     },
     Pressable: {
         flex: 1,
         alignItems: "center",
         justifyContent: "center"
     },
-
+    
     btnSave: {
         textAlign: "center",
         textAlignVertical: "bottom",
@@ -406,7 +446,6 @@ const styles = StyleSheet.create({
         color: "white",
         width: "95vw",
         height: "6vh",
-        //borderRadius: 100,
         backgroundColor: "#5b5"
     },
 

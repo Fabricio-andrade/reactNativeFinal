@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Button, View, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Button, View, StyleSheet, Text, ScrollView, RefreshControl } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import Products from './components/Products';
@@ -10,16 +10,18 @@ import Home from './components/Home';
 
 function HomeScreen({ navigation }) {
   
+  
   return (
-    <Home />
+      <Home />
+  
   );
 }
 
 function NotificationsScreen({ navigation }) {
   return (
-    
-      <Products />
-    
+
+    <Products />
+
   );
 }
 
@@ -38,11 +40,11 @@ const MyTheme = {
 };
 
 export default function App() {
-  
+
 
   return (
     <NavigationContainer theme={MyTheme}>
-      <Drawer.Navigator screenOptions={{headerTintColor: "#fff"}} initialRouteName="Home">
+      <Drawer.Navigator screenOptions={{ headerTintColor: "#fff" }} initialRouteName="Home">
         <Drawer.Screen name="Inicio" component={HomeScreen} />
         <Drawer.Screen name="Produtos" component={NotificationsScreen} />
       </Drawer.Navigator>
