@@ -1,7 +1,9 @@
 import react, { useEffect, useState, useRef } from "react";
-import { View, StyleSheet, Text, TextInput, Pressable, FlatList } from "react-native";
+import { View, StyleSheet, Text, TextInput, Pressable, FlatList, Button, Image } from "react-native";
+import { launchImageLibrary } from "react-native-image-picker";
 import { collection, addDoc, getDocs, updateDoc, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase/connection";
+import { getStorage, ref } from "firebase/storage";
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -12,11 +14,11 @@ const Separator = () => {
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false
     }),
-  });
+});
 
 function ProductsList({ data, deleteItem, editItem }) {
     return (
@@ -69,16 +71,46 @@ export default function Products() {
         };
     }, []);
 
-
     //Produtos
     const [name, setName] = useState("");
     const [dev, setDev] = useState("");
     const [categoria, setCategoria] = useState("");
     const [ano, setAno] = useState(Number);
     const [products, setProducts] = useState([]);
-    const [key, setKey] = useState("")
+    const [SelectedImage, setImage] = useState(null);
+    const [desc, setDesc] = useState("");
+    const [key, setKey] = useState("");
     let [cadastrar, setCad] = useState(false);
     let [edit, setEdit] = useState(false);
+
+
+    //Image
+    const openImagePicker = async () => {
+        const options = {
+            mediaType: 'photo',
+            includeBase64: false,
+            maxHeight: 2000,
+            maxWidth: 2000,
+            minWidth: 500
+        };
+
+        await launchImageLibrary(options, handleResponse);
+        console.log(SelectedImage);
+    };
+
+    const handleResponse = (response) => {
+        if (response.didCancel) {
+            console.log('User cancelled image picker');
+        } else if (response.error) {
+            console.log('Image picker error: ', response.error);
+        } else {
+            let imageUri = response.uri || response.assets?.[0]?.uri;
+            setImage(imageUri);
+        }
+    };
+    const storage = getStorage()
+
+    const imageRef = ref(storage, `assets/${SelectedImage}`)
 
     useEffect(() => {
         Listar();
@@ -111,13 +143,17 @@ export default function Products() {
                 nome: name,
                 produtora: dev,
                 categoria: categoria,
-                ano: ano
+                ano: ano,
+                Image: SelectedImage,
+                desc: desc
             });
             setProducts(e => [{
                 nome: name,
                 prod: dev,
                 categoria: categoria,
-                ano: ano
+                ano: ano,
+                Image: SelectedImage,
+                desc: desc
             }, ...e]);
             setCad(false);
             await schedulePushNotification(name);
@@ -130,11 +166,13 @@ export default function Products() {
     function handleEdit(e) {
         setEdit(true);
         setCad(true);
-        setKey(e.id),
-            setName(e.nome),
-            setDev(e.prod),
-            setCategoria(e.categoria),
-            setAno(e.ano)
+        setKey(e.id);
+        setName(e.nome);
+        setDev(e.prod);
+        setCategoria(e.categoria);
+        setAno(e.ano);
+        setImage(e.SelectedImage);
+        setDesc(e.Desc);
     }
 
     async function editProduct() {
@@ -143,7 +181,9 @@ export default function Products() {
             nome: name,
             produtora: dev,
             categoria: categoria,
-            ano: ano
+            ano: ano,
+            Image: SelectedImage,
+            desc: desc
         });
         setEdit(false);
         setCad(false);
@@ -185,6 +225,15 @@ export default function Products() {
                         <Text style={styles.formTitle}>Ano de lançamento</Text>
                         <TextInput style={styles.Input} onChangeText={(text) => setAno(text)} placeholder="Digite aqui" value={ano} />
                         <Separator />
+                        <Text style={styles.formTitle}>Sinopse</Text>
+                        <TextInput style={styles.Input} onChangeText={(text) => setDesc(text)} placeholder="Digite aqui" value={desc} />
+                        <Separator />
+                        <Button title='Escolher imagem' onPress={openImagePicker} />
+                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                            {SelectedImage ?
+                                <Image source={{ uri: SelectedImage }} style={{ flex: 1, maxWidth:'95vw', minHeight: "30vh" }} resizeMode="contain" /> : ''
+                            }
+                        </View>
 
                     </View>
                     {edit ?
@@ -209,62 +258,62 @@ export default function Products() {
 
 async function schedulePushNotification(name) {
     await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Novo jogo adicionado",
-        body: name,
-        data: { data: 'goes here', test: { test1: 'more data' } },
-      },
-      trigger: { seconds: 2 },
+        content: {
+            title: "Novo jogo adicionado",
+            body: name,
+            data: { data: 'goes here', test: { test1: 'more data' } },
+        },
+        trigger: { seconds: 2 },
     });
-  }
-  
-  async function registerForPushNotificationsAsync() {
+}
+
+async function registerForPushNotificationsAsync() {
     let token;
-  
+
     if (Device.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
+        await Notifications.setNotificationChannelAsync('default', {
+            name: 'default',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#FF231F7C',
+        });
     }
-  
+
     if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== 'granted') {
-        alert('Failed to get push token for push notification!');
-        return;
-      }
-      // Learn more about projectId:
-      // https://docs.expo.dev/push-notifications/push-notifications-setup/#configure-projectid
-      // EAS projectId is used here.
-      try {
-        const projectId =
-          Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-        if (!projectId) {
-          throw new Error('Project ID not found');
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
         }
-        token = (
-          await Notifications.getExpoPushTokenAsync({
-            projectId,
-          })
-        ).data;
-        console.log(token);
-      } catch (e) {
-        token = `${e}`;
-      }
+        if (finalStatus !== 'granted') {
+            alert('Failed to get push token for push notification!');
+            return;
+        }
+        // Learn more about projectId:
+        // https://docs.expo.dev/push-notifications/push-notifications-setup/#configure-projectid
+        // EAS projectId is used here.
+        try {
+            const projectId =
+                Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+            if (!projectId) {
+                throw new Error('Project ID not found');
+            }
+            token = (
+                await Notifications.getExpoPushTokenAsync({
+                    projectId,
+                })
+            ).data;
+            console.log(token);
+        } catch (e) {
+            token = `${e}`;
+        }
     } else {
-      alert('Must use physical device for Push Notifications');
+        alert('Must use physical device for Push Notifications');
     }
-  
+
     return token;
-  }
+}
 
 const styles = StyleSheet.create({
     container: {

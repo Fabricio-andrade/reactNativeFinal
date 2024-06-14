@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, View, StyleSheet, Text } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import Products from './components/Products';
+import Home from './components/Home';
 
 
 
@@ -10,50 +11,41 @@ import Products from './components/Products';
 function HomeScreen({ navigation }) {
   
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Button
-        onPress={() => navigation.navigate('Produtos')}
-        title="Ver produtos"
-      />
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'space-around',
-        }}>
-      </View>
-    </View>
+    <Home />
   );
 }
 
 function NotificationsScreen({ navigation }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+    
       <Products />
-    </View>
+    
   );
 }
 
 const Drawer = createDrawerNavigator();
+const MyTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: 'rgb(45, 255, 85)',
+    background: 'rgb(0,0,0)',
+    card: 'rgb(50,50,50)',
+    text: 'rgb(255,255,255)',
+    border: 'rgb(50,50,50)',
+    notification: 'rgb(255,255,255)'
+  },
+};
 
 export default function App() {
   
 
   return (
-    <NavigationContainer>
-      <Drawer.Navigator initialRouteName="Home">
+    <NavigationContainer theme={MyTheme}>
+      <Drawer.Navigator screenOptions={{headerTintColor: "#fff"}} initialRouteName="Home">
         <Drawer.Screen name="Inicio" component={HomeScreen} />
         <Drawer.Screen name="Produtos" component={NotificationsScreen} />
       </Drawer.Navigator>
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
