@@ -213,7 +213,7 @@ export default function Products() {
     }
     return (
         cadastrar ? (
-            <ScrollView contentContainerStyle={styles.container}>
+            <ScrollView contentContainerStyle={[styles.container]}>
                 <Pressable onPress={() => { setCad(false) }}>
                     <Text style={styles.exit}>X</Text>
                 </Pressable>
@@ -239,7 +239,7 @@ export default function Products() {
                         </Pressable>
                         {image && <Image source={{ uri: image }} style={picker.image} />}
                     </View>
-                    <View style={{height: 20}}>
+                    <View style={{flex:1, height: 20}}>
                     {edit ?
                         <Pressable style={styles.Pressable} onPress={editProduct}><Text style={styles.btnSave}>Alterar</Text></Pressable> :
                         <Pressable style={styles.Pressable} onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
@@ -418,6 +418,7 @@ const styles = StyleSheet.create({
     btnSave: {
         textAlign: "center",
         textAlignVertical: "bottom",
+        marginTop: 50,
         paddingVertical: 10,
         fontSize: 20,
         color: "white",
@@ -448,11 +449,12 @@ const picker = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         //justifyContent: 'center',
-        height: 200
+        minHeight: 100,
+        maxHeight: 200
     },
     image: {
-        minWidth: '100%',
-        maxHeight: 50,
+        minWidth: '96%',
+        height: '100%'
     },
     btnImage: {
         color: '#fff',
