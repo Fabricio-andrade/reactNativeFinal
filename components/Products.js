@@ -1,6 +1,6 @@
 import react, { useEffect, useState, useRef } from "react";
-import { View, StyleSheet, Text, TextInput, Pressable, FlatList, Button, Image, PermissionsAndroid } from "react-native";
-import { launchImageLibrary } from "react-native-image-picker";
+import { View, StyleSheet, Text, TextInput, Pressable, FlatList, Button, Image, PermissionsAndroid, ScrollView , StatusBar} from "react-native";
+//import { launchImageLibrary } from "react-native-image-picker";
 import { collection, addDoc, getDocs, updateDoc, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase/connection";
 import * as Device from 'expo-device';
@@ -22,7 +22,6 @@ Notifications.setNotificationHandler({
 
 function ProductsList({ data, deleteItem, editItem }) {
     return (
-
         <View style={styles.Card}>
             <View style={styles.cardContent}>
                 <Text style={[styles.text, styles.cardText]}>{data.nome}</Text>
@@ -86,58 +85,58 @@ export default function Products() {
 
 
     //Image
-    const openImagePicker = async () => {
-        const options = {
-            mediaType: 'photo',
-            includeBase64: false,
-            maxHeight: 2000,
-            maxWidth: 2000,
-            minWidth: 500,
-            storageOptions: {
-                skipBackup: true,
-                path: 'images'
+    /*    const openImagePicker = async () => {
+            const options = {
+                mediaType: 'photo',
+                includeBase64: false,
+                maxHeight: 2000,
+                maxWidth: 2000,
+                minWidth: 500,
+                storageOptions: {
+                    skipBackup: true,
+                    path: 'images'
+                }
+            };
+            await requestCameraPermission();
+            await launchImageLibrary(options, handleResponse);
+    
+        };
+    
+        const requestCameraPermission = async () => {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+                    {
+                        title: 'Cool Photo App Camera Permission',
+                        message:
+                            'Cool Photo App needs access to your camera ' +
+                            'so you can take awesome pictures.',
+                        buttonNeutral: 'Ask Me Later',
+                        buttonNegative: 'Cancel',
+                        buttonPositive: 'OK',
+                    },
+                );
+                if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+                    console.log('You can use the camera');
+                } else {
+                    console.log('Camera permission denied');
+                }
+            } catch (err) {
+                console.warn(err);
             }
         };
-        await requestCameraPermission();
-        await launchImageLibrary(options, handleResponse);
-
-    };
-
-    const requestCameraPermission = async () => {
-        try {
-            const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-                {
-                    title: 'Cool Photo App Camera Permission',
-                    message:
-                        'Cool Photo App needs access to your camera ' +
-                        'so you can take awesome pictures.',
-                    buttonNeutral: 'Ask Me Later',
-                    buttonNegative: 'Cancel',
-                    buttonPositive: 'OK',
-                },
-            );
-            if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-                console.log('You can use the camera');
+    */
+    /*    const handleResponse = (response) => {
+            if (response.didCancel) {
+                console.log('User cancelled image picker');
+            } else if (response.error) {
+                console.log('Image picker error: ', response.error);
             } else {
-                console.log('Camera permission denied');
+                let imageUri = response.uri || response.assets?.[0]?.uri;
+                setImage(imageUri);
             }
-        } catch (err) {
-            console.warn(err);
-        }
-    };
-
-    const handleResponse = (response) => {
-        if (response.didCancel) {
-            console.log('User cancelled image picker');
-        } else if (response.error) {
-            console.log('Image picker error: ', response.error);
-        } else {
-            let imageUri = response.uri || response.assets?.[0]?.uri;
-            setImage(imageUri);
-        }
-    };
-
+        };
+    */
     useEffect(() => {
         Listar();
     }, [])
@@ -233,48 +232,52 @@ export default function Products() {
         setDev("");
         setCategoria("");
         setAno("");
+        setDesc("");
         setProducts("");
+    }
+
+    function Cad() {
+        setKey("");
+        setName("");
+        setDev("");
+        setCategoria("");
+        setAno("");
+        setDesc("");
+        setImage(null);
+        setCad(true);
     }
     return (
         cadastrar ? (
-            <View style={styles.container}>
-                <View style={styles.content}>
-                    <Pressable onPress={() => { setCad(false) }}>
-                        <Text style={styles.text}>X</Text>
-                    </Pressable>
-                    <View style={styles.form}>
-                        <Text style={styles.formTitle}>Título</Text>
-                        <TextInput style={styles.Input} onChangeText={(text) => setName(text)} placeholder="Digite aqui" value={name} />
-                        <Separator />
-                        <Text style={styles.formTitle}>Desenvolvedora</Text>
-                        <TextInput style={styles.Input} onChangeText={(text) => setDev(text)} placeholder="Digite aqui" value={dev} />
-                        <Separator />
-                        <Text style={styles.formTitle}>Categoria</Text>
-                        <TextInput style={styles.Input} onChangeText={(text) => setCategoria(text)} placeholder="Digite aqui" value={categoria} />
-                        <Separator />
-                        <Text style={styles.formTitle}>Ano de lançamento</Text>
-                        <TextInput style={styles.Input} onChangeText={(text) => setAno(text)} placeholder="Digite aqui" value={ano} />
-                        <Separator />
-                        <Text style={styles.formTitle}>Sinopse</Text>
-                        <TextInput style={styles.Input} onChangeText={(text) => setDesc(text)} placeholder="Digite aqui" value={desc} />
-                        <Separator />
-                        <Picker />
-                        <View style={{ flex: 1, justifyContent: 'center' }}>
-                            {SelectedImage ?
-                                <Image source={{ uri: SelectedImage }} style={{flex:1, maxWidth: '100%' }} resizeMode="contain" /> : ''
-                            }
-                        </View>
-
-                    </View>
-                    {edit ?
-                        <Pressable style={styles.Pressable} onPress={editProduct}><Text style={styles.btnSave}>Alterar</Text></Pressable> :
-                        <Pressable style={styles.Pressable} onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
-                    }
+            <ScrollView contentContainerStyle={styles.container}>
+                <Pressable onPress={() => { setCad(false) }}>
+                    <Text style={styles.exit}>X</Text>
+                </Pressable>
+                <View style={styles.form}>
+                    <Text style={styles.formTitle}>Título</Text>
+                    <TextInput style={styles.Input} onChangeText={(text) => setName(text)} placeholder="Digite aqui" value={name} />
+                    <Separator />
+                    <Text style={styles.formTitle}>Desenvolvedora</Text>
+                    <TextInput style={styles.Input} onChangeText={(text) => setDev(text)} placeholder="Digite aqui" value={dev} />
+                    <Separator />
+                    <Text style={styles.formTitle}>Categoria</Text>
+                    <TextInput style={styles.Input} onChangeText={(text) => setCategoria(text)} placeholder="Digite aqui" value={categoria} />
+                    <Separator />
+                    <Text style={styles.formTitle}>Ano de lançamento</Text>
+                    <TextInput style={styles.Input} onChangeText={(text) => setAno(text)} placeholder="Digite aqui" value={ano} />
+                    <Separator />
+                    <Text style={styles.formTitle}>Sinopse</Text>
+                    <TextInput style={styles.Input} onChangeText={(text) => setDesc(text)} placeholder="Digite aqui" value={desc} />
+                    <Separator />
+                    <Picker />
                 </View>
-            </View>
+                {edit ?
+                    <Pressable style={styles.Pressable} onPress={editProduct}><Text style={styles.btnSave}>Alterar</Text></Pressable> :
+                    <Pressable style={styles.Pressable} onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
+                }
+            </ScrollView>
         ) : (<View style={styles.container}>
             <View style={styles.content}>
-                <Pressable onPress={() => { setCad(true) }}>
+                <Pressable onPress={Cad}>
                     <Text style={styles.btnSave}>Cadastrar</Text>
                 </Pressable>
                 <FlatList keyExtractor={item => item.key} data={products} renderItem={({ item }) => (
@@ -362,7 +365,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: "#222",
         width: "100%",
-        height: "100%"
+        height: "100%",
+        paddingTop: StatusBar.currentHeight
     },
 
     content: {
@@ -434,10 +438,11 @@ const styles = StyleSheet.create({
     },
     Pressable: {
         flex: 1,
-        alignItems: "center",
-        justifyContent: "center"
+        //       alignItems: "center",
+        //       justifyContent: "center",
+        height: 30
     },
-    
+
     btnSave: {
         textAlign: "center",
         textAlignVertical: "bottom",
@@ -447,6 +452,18 @@ const styles = StyleSheet.create({
         width: "95vw",
         height: "6vh",
         backgroundColor: "#5b5"
+    },
+
+    exit: {
+        backgroundColor: "#5b5",
+        color: "#fff",
+        width: 30,
+        height: 30,
+        textAlign: "center",
+        textAlignVertical: "center",
+        fontSize: 20,
+        marginTop: 15
+
     },
 
     separator: {
