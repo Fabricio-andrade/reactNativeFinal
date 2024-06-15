@@ -1,12 +1,12 @@
 import react, { useEffect, useState, useRef } from "react";
-import { View, StyleSheet, Text, TextInput, Pressable, FlatList, Button, Image, PermissionsAndroid, ScrollView , StatusBar} from "react-native";
+import { View, StyleSheet, Text, TextInput, Pressable, FlatList, Button, Image, PermissionsAndroid, ScrollView, StatusBar } from "react-native";
 //import { launchImageLibrary } from "react-native-image-picker";
 import { collection, addDoc, getDocs, updateDoc, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase/connection";
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import Picker from "./imagePicker";
+import * as ImagePicker from 'expo-image-picker';
 
 const Separator = () => {
     return <View style={styles.separator} />
@@ -77,7 +77,6 @@ export default function Products() {
     const [categoria, setCategoria] = useState("");
     const [ano, setAno] = useState(Number);
     const [products, setProducts] = useState([]);
-    const [SelectedImage, setImage] = useState(null);
     const [desc, setDesc] = useState("");
     const [key, setKey] = useState("");
     let [cadastrar, setCad] = useState(false);
@@ -85,58 +84,24 @@ export default function Products() {
 
 
     //Image
-    /*    const openImagePicker = async () => {
-            const options = {
-                mediaType: 'photo',
-                includeBase64: false,
-                maxHeight: 2000,
-                maxWidth: 2000,
-                minWidth: 500,
-                storageOptions: {
-                    skipBackup: true,
-                    path: 'images'
-                }
-            };
-            await requestCameraPermission();
-            await launchImageLibrary(options, handleResponse);
-    
-        };
-    
-        const requestCameraPermission = async () => {
-            try {
-                const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-                    {
-                        title: 'Cool Photo App Camera Permission',
-                        message:
-                            'Cool Photo App needs access to your camera ' +
-                            'so you can take awesome pictures.',
-                        buttonNeutral: 'Ask Me Later',
-                        buttonNegative: 'Cancel',
-                        buttonPositive: 'OK',
-                    },
-                );
-                if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-                    console.log('You can use the camera');
-                } else {
-                    console.log('Camera permission denied');
-                }
-            } catch (err) {
-                console.warn(err);
-            }
-        };
-    */
-    /*    const handleResponse = (response) => {
-            if (response.didCancel) {
-                console.log('User cancelled image picker');
-            } else if (response.error) {
-                console.log('Image picker error: ', response.error);
-            } else {
-                let imageUri = response.uri || response.assets?.[0]?.uri;
-                setImage(imageUri);
-            }
-        };
-    */
+    const [image, setImage] = useState(null);
+
+    const pickImage = async () => {
+        // No permissions request is necessary for launching the image library
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.All,
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 1,
+        });
+
+        console.log(result);
+
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
+        }
+    };
+
     useEffect(() => {
         Listar();
     }, [])
@@ -172,7 +137,7 @@ export default function Products() {
                 produtora: dev,
                 categoria: categoria,
                 ano: ano,
-                Image: SelectedImage,
+                Image: image,
                 desc: desc
             });
             setProducts(e => [{
@@ -180,7 +145,7 @@ export default function Products() {
                 prod: dev,
                 categoria: categoria,
                 ano: ano,
-                Image: SelectedImage,
+                Image: image,
                 desc: desc
             }, ...e]);
             setCad(false);
@@ -210,7 +175,7 @@ export default function Products() {
             produtora: dev,
             categoria: categoria,
             ano: ano,
-            Image: SelectedImage,
+            Image: image,
             desc: desc
         });
         setEdit(false);
@@ -268,12 +233,19 @@ export default function Products() {
                     <Text style={styles.formTitle}>Sinopse</Text>
                     <TextInput style={styles.Input} onChangeText={(text) => setDesc(text)} placeholder="Digite aqui" value={desc} />
                     <Separator />
-                    <Picker />
+                    <View style={picker.container}>
+                        <Pressable onPress={pickImage}>
+                            <Text style={picker.btnImage}>Escolher Imagem</Text>
+                        </Pressable>
+                        {image && <Image source={{ uri: image }} style={picker.image} />}
+                    </View>
+                    <View style={{height: 20}}>
+                    {edit ?
+                        <Pressable style={styles.Pressable} onPress={editProduct}><Text style={styles.btnSave}>Alterar</Text></Pressable> :
+                        <Pressable style={styles.Pressable} onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
+                    }
+                    </View>
                 </View>
-                {edit ?
-                    <Pressable style={styles.Pressable} onPress={editProduct}><Text style={styles.btnSave}>Alterar</Text></Pressable> :
-                    <Pressable style={styles.Pressable} onPress={addProduct}><Text style={styles.btnSave}>Salvar</Text></Pressable>
-                }
             </ScrollView>
         ) : (<View style={styles.container}>
             <View style={styles.content}>
@@ -470,3 +442,26 @@ const styles = StyleSheet.create({
         marginVertical: 5,
     },
 })
+
+const picker = StyleSheet.create({
+    container: {
+        flex: 1,
+        alignItems: 'center',
+        //justifyContent: 'center',
+        height: 200
+    },
+    image: {
+        minWidth: '100%',
+        maxHeight: 50,
+    },
+    btnImage: {
+        color: '#fff',
+        width: 335,
+        textAlign: "center",
+        textAlignVertical: 'center',
+        marginVertical: 15,
+        backgroundColor: '#5b5',
+        height: 40,
+        fontSize: 20
+    },
+});

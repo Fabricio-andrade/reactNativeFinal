@@ -7,13 +7,12 @@ import { db } from "../firebase/connection";
 
 function ProductsList({ data }) {
     const [show, setShow] = useState(false);
-    let image = data.image;
     return (
         <View style={styles.Card}>
             <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{data.nome}</Text>
                 <View style={styles.cardImage} >
-                    <Image source={{ uri: image }} style={styles.cardImage} resizeMode="contain" />
+                    <Image source={{ uri: data.image }} style={styles.cardImage} resizeMode="contain" />
                 </View>
                 {show ?
                     <>
@@ -26,8 +25,8 @@ function ProductsList({ data }) {
                     : ''
                 }
                 {!show ?
-                    <Pressable onPress={() => { setShow(true) }}><Text style={{ color: '#fff' }}>Mostrar mais</Text></Pressable> :
-                    <Pressable onPress={() => { setShow(false) }}><Text style={{ color: '#fff' }}>Recolher</Text></Pressable>
+                    <Pressable onPress={() => { setShow(true) }}><Text style={styles.btnShow}>Mostrar mais</Text></Pressable> :
+                    <Pressable onPress={() => { setShow(false) }}><Text style={styles.btnShow}>Recolher</Text></Pressable>
                 }
             </View>
         </View>
@@ -106,15 +105,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginVertical: 10,
+        marginVertical: 20,
         padding: 10,
         backgroundColor: "#444",
-        width: "95vw",
+        width: "100vw",
         height: "15vh"
     },
     cardContent: {
-        maxWidth: '100%',
-        minHeight: '20vh'
+        maxWidth: 320,
+        minHeight: 300
     },
 
     cardText: {
@@ -145,7 +144,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-
+    btnShow: {
+        color: '#fff',
+        textAlign: "center",
+        textAlignVertical: 'center',
+        marginVertical: 8,
+        backgroundColor: '#5b5',
+        width: 100,
+        height: 40,
+        fontSize: 15
+    }
 
 
 })
