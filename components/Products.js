@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#222",
         width: "100%",
         height: "100%",
-        paddingTop: StatusBar.currentHeight
+        
     },
 
     content: {
